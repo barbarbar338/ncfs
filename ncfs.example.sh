@@ -97,7 +97,7 @@ ngrok config add-authtoken $NGROK_AUTH_TOKEN
 # Run NGROK on background
 echo "🚀 NGROK: Starting NGROK on background..."
 
-ngrok tcp $NGROK_TCP_PORT > /dev/null &
+ngrok tcp 127.0.0.1:$NGROK_TCP_PORT > /dev/null &
 
 # Wait for NGROK to start
 echo "🕑 NGROK: Waiting for NGROK to start..."
