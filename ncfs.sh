@@ -43,7 +43,7 @@ fi
 # Check if jq is installed. If not, install it.
 echo "🔍 DEPENDENCIES: Checking if jq is installed..."
 
-if ! command -v curl &> /dev/null; then
+if ! command -v jq &> /dev/null; then
     echo "❌ DEPENDENCIES: jq could not be found"
     echo "⬇️ DEPENDENCIES: Installing jq..."
 
