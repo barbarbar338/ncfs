@@ -9,8 +9,8 @@ NGROK_AUTH_TOKEN=""             # ngrok auth token, get it from https://dashboar
 CLOUDFLARE_AUTH_EMAIL=""        # Cloudflare auth email
 CLOUDFLARE_API_KEY=""           # Cloudflare API key, get it from https://dash.cloudflare.com/profile/api-tokens => Global API Key 
 CLOUDFLARE_ZONE_ID=""           # Cloudflare zone id
-CLOUDFLARE_CNAME_RECORD_NAME="" # Cloudflare record name (server.mydomain.com), create a CNAME record in your Cloudflare dashboard and set the name to this value (you can put example.com to content for now)
-CLOUDFLARE_SRV_RECORD_NAME=""   # Cloudflare record name (play.mydomain.com, use this while connecting to your server), create a SRV record in your Cloudflare dashboard and set the name to this value (you can put your CLOUDFLARE_CNAME_RECORD_NAME variable to content for now)
+CLOUDFLARE_CNAME_RECORD_NAME="server.example.com" # Cloudflare record name (server.mydomain.com), create a CNAME record in your Cloudflare dashboard and set the name to this value (you can put example.com to content for now)
+CLOUDFLARE_SRV_RECORD_NAME="play.example.com"   # Cloudflare record name (play.mydomain.com, use this while connecting to your server), create a SRV record in your Cloudflare dashboard and set the name to this value (you can put your CLOUDFLARE_CNAME_RECORD_NAME variable to content for now)
 
 echo "🚀 NCFS: Starting NGROK to Cloudflare Forwarding Script..."
 
