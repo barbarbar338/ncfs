@@ -1,0 +1,46 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "NCFS Config Schema",
+    "description": "NCFS config schema for validating `config.json` files.",
+    "type": "object",
+    "properties": {
+        "NGROK_TCP_PORT": {
+            "description": "Minecraft server port, default is 25565",
+            "type": "number"
+        },
+        "NGROK_AUTH_TOKEN": {
+            "description": "ngrok auth token, get it from https://dashboard.ngrok.com/auth/your-authtoken",
+            "type": "string"
+        },
+        "CLOUDFLARE_AUTH_EMAIL": {
+            "description": "Cloudflare auth email",
+            "type": "string",
+            "format": "email"
+        },
+        "CLOUDFLARE_API_KEY": {
+            "description": "Cloudflare API key, get it from https://dash.cloudflare.com/profile/api-tokens => Global API Key",
+            "type": "string"
+        },
+        "CLOUDFLARE_ZONE_ID": {
+            "description": "Cloudflare zone id",
+            "type": "string"
+        },
+        "CLOUDFLARE_CNAME_RECORD_NAME": {
+            "description": "Cloudflare record name (server.mydomain.com), create a CNAME record in your Cloudflare dashboard and set the name to this value (you can put example.com to content for now)",
+            "type": "string"
+        },
+        "CLOUDFLARE_SRV_RECORD_NAME": {
+            "description": "Cloudflare record name (play.mydomain.com, use this while connecting to your server), create a SRV record in your Cloudflare dashboard and set the name to this value (you can put your CLOUDFLARE_CNAME_RECORD_NAME variable to content for now)",
+            "type": "string"
+        }
+    },
+    "required": [
+        "NGROK_TCP_PORT",
+        "NGROK_AUTH_TOKEN",
+        "CLOUDFLARE_AUTH_EMAIL",
+        "CLOUDFLARE_API_KEY",
+        "CLOUDFLARE_ZONE_ID",
+        "CLOUDFLARE_CNAME_RECORD_NAME",
+        "CLOUDFLARE_SRV_RECORD_NAME"
+    ]
+}

@@ -3,19 +3,12 @@
 # Copyright © 2023 Barış DEMİRCİ <hi@338.rocks>
 # SPDX-License-Identifier: GPL-3.0
 
-# Config: update these variables according to your minecraft server and ngrok account
-NGROK_TCP_PORT=25565            # Minecraft server port, default is 25565
-NGROK_AUTH_TOKEN=""             # ngrok auth token, get it from https://dashboard.ngrok.com/auth/your-authtoken
-CLOUDFLARE_AUTH_EMAIL=""        # Cloudflare auth email
-CLOUDFLARE_API_KEY=""           # Cloudflare API key, get it from https://dash.cloudflare.com/profile/api-tokens => Global API Key 
-CLOUDFLARE_ZONE_ID=""           # Cloudflare zone id
-CLOUDFLARE_CNAME_RECORD_NAME="server.example.com" # Cloudflare record name (server.mydomain.com), create a CNAME record in your Cloudflare dashboard and set the name to this value (you can put example.com to content for now)
-CLOUDFLARE_SRV_RECORD_NAME="play.example.com"   # Cloudflare record name (play.mydomain.com, use this while connecting to your server), create a SRV record in your Cloudflare dashboard and set the name to this value (you can put your CLOUDFLARE_CNAME_RECORD_NAME variable to content for now)
-
 echo "🚀 NCFS: Starting NGROK to Cloudflare Forwarding Script..."
 
 # Checking dependencies
 echo "🔍 NCFS: Checking dependencies..."
+
+sudo apt update
 
 # Check if snap is installed. If not, install it.
 echo "🔍 DEPENDENCIES: Checking if snap is installed..."
@@ -24,7 +17,6 @@ if ! command -v snap &> /dev/null; then
     echo "❌ DEPENDENCIES: snap could not be found"
     echo "⬇️ DEPENDENCIES: Installing snap..."
 
-    sudo apt update
     sudo apt install snapd
 fi
 
@@ -45,9 +37,28 @@ if ! command -v curl &> /dev/null; then
     echo "❌ DEPENDENCIES: curl could not be found"
     echo "⬇️ DEPENDENCIES: Installing curl..."
 
-    sudo apt update
     sudo apt install curl
 fi
+
+# Check if jq is installed. If not, install it.
+echo "🔍 DEPENDENCIES: Checking if jq is installed..."
+
+if ! command -v curl &> /dev/null; then
+    echo "❌ DEPENDENCIES: jq could not be found"
+    echo "⬇️ DEPENDENCIES: Installing jq..."
+
+    sudo apt install jq
+fi
+
+config_file="config.json"
+
+NGROK_TCP_PORT=`jq -r '.NGROK_TCP_PORT' "$input_file"`
+NGROK_AUTH_TOKEN=`jq -r '.NGROK_AUTH_TOKEN' "$input_file"`
+CLOUDFLARE_AUTH_EMAIL=`jq -r '.CLOUDFLARE_AUTH_EMAIL' "$input_file"`
+CLOUDFLARE_API_KEY=`jq -r '.CLOUDFLARE_API_KEY' "$input_file"`
+CLOUDFLARE_ZONE_ID=`jq -r '.CLOUDFLARE_ZONE_ID' "$input_file"`
+CLOUDFLARE_CNAME_RECORD_NAME=`jq -r '.CLOUDFLARE_CNAME_RECORD_NAME' "$input_file"`
+CLOUDFLARE_SRV_RECORD_NAME=`jq -r '.CLOUDFLARE_SRV_RECORD_NAME' "$input_file"`
 
 # Checking cloudflare config
 echo "🔍 NCFS: Checking Cloudflare config..."
