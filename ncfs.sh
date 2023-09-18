@@ -50,15 +50,13 @@ if ! command -v jq &> /dev/null; then
     sudo apt install jq
 fi
 
-config_file="config.json"
-
-NGROK_TCP_PORT=`jq -r '.NGROK_TCP_PORT' "$input_file"`
-NGROK_AUTH_TOKEN=`jq -r '.NGROK_AUTH_TOKEN' "$input_file"`
-CLOUDFLARE_AUTH_EMAIL=`jq -r '.CLOUDFLARE_AUTH_EMAIL' "$input_file"`
-CLOUDFLARE_API_KEY=`jq -r '.CLOUDFLARE_API_KEY' "$input_file"`
-CLOUDFLARE_ZONE_ID=`jq -r '.CLOUDFLARE_ZONE_ID' "$input_file"`
-CLOUDFLARE_CNAME_RECORD_NAME=`jq -r '.CLOUDFLARE_CNAME_RECORD_NAME' "$input_file"`
-CLOUDFLARE_SRV_RECORD_NAME=`jq -r '.CLOUDFLARE_SRV_RECORD_NAME' "$input_file"`
+NGROK_TCP_PORT=`jq -r .NGROK_TCP_PORT config.json`
+NGROK_AUTH_TOKEN=`jq -r .NGROK_AUTH_TOKEN config.json`
+CLOUDFLARE_AUTH_EMAIL=`jq -r .CLOUDFLARE_AUTH_EMAIL config.json`
+CLOUDFLARE_API_KEY=`jq -r .CLOUDFLARE_API_KEY config.json`
+CLOUDFLARE_ZONE_ID=`jq -r .CLOUDFLARE_ZONE_ID config.json`
+CLOUDFLARE_CNAME_RECORD_NAME=`jq -r .CLOUDFLARE_CNAME_RECORD_NAME config.json`
+CLOUDFLARE_SRV_RECORD_NAME=`jq -r .CLOUDFLARE_SRV_RECORD_NAME config.json`
 
 # Checking cloudflare config
 echo "🔍 NCFS: Checking Cloudflare config..."
