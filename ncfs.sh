@@ -8,7 +8,8 @@ echo "🚀 NCFS: Starting NGROK to Cloudflare Forwarding Script..."
 # Checking dependencies
 echo "🔍 NCFS: Checking dependencies..."
 
-sudo apt update
+apt_dependencies=()
+snap_dependencies=()
 
 # Check if snap is installed. If not, install it.
 echo "🔍 DEPENDENCIES: Checking if snap is installed..."
@@ -17,7 +18,7 @@ if ! command -v snap &> /dev/null; then
     echo "❌ DEPENDENCIES: snap could not be found"
     echo "⬇️ DEPENDENCIES: Installing snap..."
 
-    sudo apt install snapd
+    apt_dependencies+=("snapd")
 fi
 
 # Check if ngrok is installed. If not, install it.
@@ -27,7 +28,7 @@ if ! command -v ngrok &> /dev/null; then
     echo "❌ DEPENDENCIES: ngrok could not be found"
     echo "⬇️ DEPENDENCIES: Installing ngrok..."
 
-    sudo snap install ngrok
+    snap_dependencies+=("ngrok")
 fi
 
 # Check if curl is installed. If not, install it.
@@ -37,7 +38,7 @@ if ! command -v curl &> /dev/null; then
     echo "❌ DEPENDENCIES: curl could not be found"
     echo "⬇️ DEPENDENCIES: Installing curl..."
 
-    sudo apt install curl
+    apt_dependencies+=("curl")
 fi
 
 # Check if jq is installed. If not, install it.
@@ -47,8 +48,51 @@ if ! command -v jq &> /dev/null; then
     echo "❌ DEPENDENCIES: jq could not be found"
     echo "⬇️ DEPENDENCIES: Installing jq..."
 
-    sudo apt install jq
+    apt_dependencies+=("jq")
 fi
+
+join() {
+    local IFS="$1"
+    shift
+    echo "$*"
+}
+
+snap_command=""
+apt_command=""
+
+if [ ${#snap_dependencies[@]} -gt 0 ]; then
+    snap_command="snap install $(join   "${snap_dependencies[@]}")"
+fi
+
+if [ ${#apt_dependencies[@]} -gt 0 ]; then
+    apt_command="sudo apt install -y $(join   "${apt_dependencies[@]}")"
+fi
+
+install_dependencies() {
+    sudo apt update
+    sudo snap refresh 
+
+    if [ ! -z "$snap_command" ]; then
+        echo "⬇️ DEPENDENCIES: Installing snap dependencies..."
+
+        eval "$snap_command"
+    fi
+
+    if [ ! -z "$apt_command" ]; then
+        echo "⬇️ DEPENDENCIES: Installing apt dependencies..."
+
+        eval "$apt_command"
+    fi
+
+    echo "✅ DEPENDENCIES: Dependencies installed successfully"
+}
+
+read -p "🚀 DEPENDENCIES: Would you like to install missing dependencies? [y/N] " install
+
+case $install in
+    [Yy]* ) install_dependencies; break;;
+    * ) echo "❌ DEPENDENCIES: Operation cancelled, exiting..."; exit 1;;
+esac
 
 NGROK_TCP_PORT=`jq -r .NGROK_TCP_PORT config.json`
 NGROK_AUTH_TOKEN=`jq -r .NGROK_AUTH_TOKEN config.json`
