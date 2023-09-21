@@ -87,12 +87,15 @@ install_dependencies() {
     echo "✅ DEPENDENCIES: Dependencies installed successfully"
 }
 
-read -p "🚀 DEPENDENCIES: Would you like to install missing dependencies? [y/N] " install
+# if snap command or apt command is not empty, ask user if they want to install dependencies
+if [ ! -z "$snap_command" ] || [ ! -z "$apt_command" ]; then
+    read -p "🚀 DEPENDENCIES: Would you like to install missing dependencies? [y/N] " install
 
-case $install in
-    [Yy]* ) install_dependencies; break;;
-    * ) echo "❌ DEPENDENCIES: Operation cancelled, exiting..."; exit 1;;
-esac
+    case $install in
+        [Yy]* ) install_dependencies; break;;
+        * ) echo "❌ DEPENDENCIES: Operation cancelled, exiting..."; exit 1;;
+    esac
+fi
 
 NGROK_TCP_PORT=`jq -r .NGROK_TCP_PORT config.json`
 NGROK_AUTH_TOKEN=`jq -r .NGROK_AUTH_TOKEN config.json`
