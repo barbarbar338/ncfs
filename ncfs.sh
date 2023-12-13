@@ -10,6 +10,7 @@ echo "🔍 NCFS: Checking dependencies..."
 
 apt_dependencies=()
 snap_dependencies=()
+is_passed_other_snap=true
 
 # Check if snap is installed. If not, install it.
 echo "🔍 DEPENDENCIES: Checking if snap is installed..."
@@ -28,6 +29,7 @@ if ! command -v ngrok &>/dev/null; then
 	echo "❌ DEPENDENCIES: ngrok could not be found"
 	echo "⬇️ DEPENDENCIES: Installing ngrok..."
 
+	is_passed_other_snap=false
 	snap_dependencies+=("ngrok")
 fi
 
@@ -38,6 +40,7 @@ if ! command -v curl &>/dev/null; then
 	echo "❌ DEPENDENCIES: curl could not be found"
 	echo "⬇️ DEPENDENCIES: Installing curl..."
 
+	is_passed_other_snap=false
 	apt_dependencies+=("curl")
 fi
 
@@ -48,6 +51,7 @@ if ! command -v jq &>/dev/null; then
 	echo "❌ DEPENDENCIES: jq could not be found"
 	echo "⬇️ DEPENDENCIES: Installing jq..."
 
+	is_passed_other_snap=false
 	apt_dependencies+=("jq")
 fi
 
@@ -88,19 +92,21 @@ install_dependencies() {
 }
 
 # if snap command or apt command is not empty, ask user if they want to install dependencies
-if [ ! -z "$snap_command" ] || [ ! -z "$apt_command" ]; then
-	read -p "🚀 DEPENDENCIES: Would you like to install missing dependencies? [y/N] " install
+if [ ! $is_passed_other_snap == "true" ]; then
+	if [ ! -z "$snap_command" ] || [ ! -z "$apt_command" ]; then
+		read -p "🚀 DEPENDENCIES: Would you like to install missing dependencies? [y/N] " install
 
-	case $install in
-	[Yy]*)
-		install_dependencies
-		break
-		;;
-	*)
-		echo "❌ DEPENDENCIES: Operation cancelled, exiting..."
-		exit 1
-		;;
-	esac
+		case $install in
+		[Yy]*)
+			install_dependencies
+			break
+			;;
+		*)
+			echo "❌ DEPENDENCIES: Operation cancelled, exiting..."
+			exit 1
+			;;
+		esac
+	fi
 fi
 
 NGROK_TCP_PORT=$(jq -r .NGROK_TCP_PORT config.json)
