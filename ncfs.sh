@@ -92,7 +92,7 @@ install_dependencies() {
 }
 
 # if snap command or apt command is not empty, ask user if they want to install dependencies
-if [ ! $is_passed_other_snap == "true" ]; then
+if ! $is_passed_other_snap; then
 	if [ ! -z "$snap_command" ] || [ ! -z "$apt_command" ]; then
 		read -p "🚀 DEPENDENCIES: Would you like to install missing dependencies? [y/N] " install
 
