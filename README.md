@@ -1,16 +1,22 @@
 # 🚀 NGROK to Cloudflare Tunnel Script
+
 - This script will help you to create a tunnel to your local minecraft server using ngrok and cloudflare.
 - Creates a ngrok tcp tunnel and sets required dns record on cloudflare.
-- Opens your local minecraft server to world without any hassle. 
+- Opens your local minecraft server to world without any hassle.
 - Port forwarding, firewall settings or any other configuration is not required, everything is handled by ngrok and cloudflare.
 
 # 🏃 How to use
+
 - Clone this repository
 - Copy `ncfs.example.sh` to `ncfs.sh` and edit it with your details.
 - Create a CNAME record on your cloudflare DNS dashboard (Instructions in `ncfs.sh` file)
 - Create a SRV record on your cloudflare DNS dashboard (Instructions in `ncfs.sh` file)
 - Run `ncfs.sh` and wait
 - You (and everyone in the world!) can now connect to your minecraft server using your domain name.
+
+## 🐋 Use with docker
+
+Visit to [here](docker).
 
 # 🧦 Contributing
 
@@ -28,5 +34,5 @@ Give a ⭐️ if this project helped you!
 
 # 📞 Contact
 
--   Mail: hi@338.rocks
--   Discord: https://discord.gg/BjEJFwh
+- Mail: hi@338.rocks
+- Discord: https://discord.gg/BjEJFwh
