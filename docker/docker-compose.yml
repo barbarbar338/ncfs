@@ -30,7 +30,7 @@ services:
     networks:
       - ngrok-net
     environment:
-      - DOCKER_MC_NETWORK_NAME=mc
+      - DOCKER_MC_NETWORK=mc
 
 networks:
   ngrok-net:

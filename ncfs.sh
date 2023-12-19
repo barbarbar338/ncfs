@@ -165,10 +165,10 @@ ngrok config add-authtoken $NGROK_AUTH_TOKEN
 # Run NGROK on background
 echo "🚀 NGROK: Starting NGROK on background..."
 
-if [ -z "$DOCKER_MC_NETWORK_NAME" ]; then
+if [ -z "$DOCKER_MC_NETWORK" ]; then
 	ngrok tcp 127.0.0.1:$NGROK_TCP_PORT >/dev/null &
 else
-	ngrok tcp $DOCKER_MC_NETWORK_NAME:$NGROK_TCP_PORT >/dev/null &
+	ngrok tcp $DOCKER_MC_NETWORK:$NGROK_TCP_PORT >/dev/null &
 fi
 
 # Wait for NGROK to start
