@@ -235,6 +235,6 @@ case "$update" in
 esac
 
 # Done! Exit gracefully
-echo "✅ NCFS: Done! Exiting gracefully..."
+echo "✅ NCFS: Done (Press Ctrl-C then kill ngrok and ncfs)"
 
-exit 0
+tail -f "/dev/null"
