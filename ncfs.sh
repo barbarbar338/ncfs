@@ -238,3 +238,5 @@ esac
 echo "✅ NCFS: Done (Press Ctrl-C then kill ngrok and ncfs)"
 
 tail -f "/dev/null"
+
+exit 0
