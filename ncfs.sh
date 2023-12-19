@@ -165,7 +165,11 @@ ngrok config add-authtoken $NGROK_AUTH_TOKEN
 # Run NGROK on background
 echo "🚀 NGROK: Starting NGROK on background..."
 
-ngrok tcp 127.0.0.1:$NGROK_TCP_PORT >/dev/null &
+if [ -z "$DOCKER_MC_NETWORK" ]; then
+	ngrok tcp 127.0.0.1:$NGROK_TCP_PORT >/dev/null &
+else
+	ngrok tcp $DOCKER_MC_NETWORK:$NGROK_TCP_PORT >/dev/null &
+fi
 
 # Wait for NGROK to start
 echo "🕑 NGROK: Waiting for NGROK to start..."
@@ -235,6 +239,8 @@ case "$update" in
 esac
 
 # Done! Exit gracefully
-echo "✅ NCFS: Done! Exiting gracefully..."
+echo "✅ NCFS: Done (Press Ctrl-C then kill ngrok and ncfs)"
+
+tail -f "/dev/null"
 
 exit 0
