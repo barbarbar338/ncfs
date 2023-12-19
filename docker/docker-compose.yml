@@ -25,7 +25,6 @@ services:
     ports:
       - 4040:4040
     volumes:
-      - ./ngrok.yml:/root/.config/ngrok/ngrok.yml
       - ./config.json:/app/config.json
     networks:
       - ngrok-net
