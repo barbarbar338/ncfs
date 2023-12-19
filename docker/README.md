@@ -4,7 +4,7 @@
 
 - Create config.json
 
-Download conifg.json
+Download config.json
 
 ```bash
 wget "https://raw.githubusercontent.com/barbarbar338/ncfs/main/config.json"
