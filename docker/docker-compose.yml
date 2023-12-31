@@ -18,6 +18,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      network: host
     container_name: ncfs
     depends_on:
       - mc
