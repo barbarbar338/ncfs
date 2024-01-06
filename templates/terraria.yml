@@ -1,0 +1,31 @@
+version: "3.8"
+
+name: ncfs-terraria-complex
+
+networks:
+    ncfs-terraria-net:
+        name: ncfs-terraria-net
+
+services:
+    ncfs:
+        image: barbarbar338/ncfs:buildx-latest 
+        container_name: ncfs
+        depends_on:
+            - terraria
+        restart: unless-stopped
+        ports:
+            - 4040:4040
+        volumes:
+            - ./config.json:/app/config.json
+        networks:
+            - ncfs-terraria-net
+
+    terraria:
+        container_name: terraria
+        image: kaysond/docker-terraria
+        restart: unless-stopped
+        volumes:
+            - ./docker-volumes/terraria-data/worlds:/world
+            - ./docker-volumes/terraria-data/config:/config
+        networks:
+            - ncfs-terraria-net

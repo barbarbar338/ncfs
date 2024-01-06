@@ -30,6 +30,6 @@ services:
         ports:
             - 25565:25565/tcp
         volumes:
-            - ./mc-data:/data
+            - ./docker-volumes/mc-data:/data
         networks:
             - ncfs-mc-net

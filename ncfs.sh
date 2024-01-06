@@ -3,6 +3,8 @@
 # Copyright © 2023 Barış DEMİRCİ <hi@338.rocks>
 # SPDX-License-Identifier: GPL-3.0
 
+echo "Starting NCFS..."
+
 get_variable() {
     local variable_name="$1"
     local config_file="$2"
@@ -45,6 +47,7 @@ CLOUDFLARE_CNAME_RECORD_NAME=$(get_variable "CLOUDFLARE_CNAME_RECORD_NAME" "conf
 CLOUDFLARE_SRV_RECORD_NAME=$(get_variable "CLOUDFLARE_SRV_RECORD_NAME" "config.json" false)
 CLOUDFLARE_SRV_RECORD_PREIX=$(get_variable "CLOUDFLARE_SRV_RECORD_PREIX" "config.json" false)
 
+echo "Checking if CNAME record exists in Cloudflare..."
 cname_record=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records?type=CNAME&name=$CLOUDFLARE_CNAME_RECORD_NAME" \
 	-H "X-Auth-Email: $CLOUDFLARE_AUTH_EMAIL" \
 	-H "X-Auth-Key: $CLOUDFLARE_API_KEY" \
@@ -60,6 +63,7 @@ cname_record_id=$(echo "$cname_record" | sed -E 's/.*"id":"(\w+)".*/\1/')
 srv_record_id="_DEFAULT_VALUE_DO_NOT_USE_IT"
 
 if [ "$CLOUDFLARE_SRV_RECORD_NAME" != "_DEFAULT_VALUE_DO_NOT_USE_IT" ]; then
+	echo "Checking if SRV record exists in Cloudflare..."
 	srv_record=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records?type=SRV&name=_minecraft._tcp.$CLOUDFLARE_SRV_RECORD_NAME" \
 		-H "X-Auth-Email: $CLOUDFLARE_AUTH_EMAIL" \
 		-H "X-Auth-Key: $CLOUDFLARE_API_KEY" \
@@ -73,6 +77,7 @@ if [ "$CLOUDFLARE_SRV_RECORD_NAME" != "_DEFAULT_VALUE_DO_NOT_USE_IT" ]; then
 	srv_record_id=$(echo "$srv_record" | sed -E 's/.*"id":"(\w+)".*/\1/')
 fi
 
+echo "Starting ngrok..."
 ngrok config add-authtoken $NGROK_AUTH_TOKEN
 
 ngrok tcp 127.0.0.1:$NGROK_TCP_PORT >/dev/null &
@@ -89,6 +94,10 @@ IFS=':' read -ra ADDR <<<"$parsed_ngrok_url"
 ngrok_host=${ADDR[0]}
 ngrok_port=${ADDR[1]}
 
+echo "Host is $ngrok_host"
+echo "Port is $ngrok_port"
+
+echo "Updating CNAME record in Cloudflare..."
 update=$(curl -s -X PATCH "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records/$cname_record_id" \
 	-H "X-Auth-Email: $CLOUDFLARE_AUTH_EMAIL" \
 	-H "X-Auth-Key: $CLOUDFLARE_API_KEY" \
@@ -103,6 +112,7 @@ case "$update" in
 esac
 
 if [ "$CLOUDFLARE_SRV_RECORD_NAME" != "_DEFAULT_VALUE_DO_NOT_USE_IT" ]; then
+	echo "Updating SRV record in Cloudflare..."
 	update=$(curl -s -X PATCH "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records/$srv_record_id" \
 		-H "X-Auth-Email: $CLOUDFLARE_AUTH_EMAIL" \
 		-H "X-Auth-Key: $CLOUDFLARE_API_KEY" \
@@ -111,11 +121,13 @@ if [ "$CLOUDFLARE_SRV_RECORD_NAME" != "_DEFAULT_VALUE_DO_NOT_USE_IT" ]; then
 
 	case "$update" in
 	*"\"success\":false"*)
-		echo "❌ CF Updater: SRV record could not be updated in Cloudflare. $update"
+		echo "SRV record could not be updated in Cloudflare. $update"
 		exit 1
 		;;
 	esac
 fi
+
+echo "Done! You can connect to your server using $ngrok_host:$ngrok_port"
 
 tail -f "/dev/null"
 
