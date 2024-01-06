@@ -9,10 +9,7 @@
 # Nothing fancy. Just a simple script to get the latest ncfs.sh script
 
 # Get the latest ncfs.sh script from github
-wget https://raw.githubusercontent.com/barbarbar338/ncfs/master/templates/minecraft/ncfs.sh
-wget https://raw.githubusercontent.com/barbarbar338/ncfs/master/shared/getconfig.sh
-wget https://raw.githubusercontent.com/barbarbar338/ncfs/master/shared/cf.sh
-wget https://raw.githubusercontent.com/barbarbar338/ncfs/master/shared/ngrok.sh
+wget https://raw.githubusercontent.com/barbarbar338/ncfs/main/ncfs.sh
 
 # Set permissions
 chmod +x ncfs.sh

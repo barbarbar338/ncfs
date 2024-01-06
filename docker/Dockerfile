@@ -17,7 +17,7 @@ USER app
 WORKDIR /app
 
 # Setup
-RUN wget https://raw.githubusercontent.com/barbarbar338/ncfs/main/docker/runner.sh -O /app/runner.sh
+RUN wget https://raw.githubusercontent.com/barbarbar338/ncfs/main/runner.sh -O /app/runner.sh
 RUN chmod 755 /app/runner.sh
 
 EXPOSE 4040

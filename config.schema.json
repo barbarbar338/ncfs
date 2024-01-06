@@ -5,7 +5,7 @@
     "type": "object",
     "properties": {
         "NGROK_TCP_PORT": {
-            "description": "Minecraft server port, default is 25565",
+            "description": "Game server port",
             "type": "number"
         },
         "NGROK_AUTH_TOKEN": {
