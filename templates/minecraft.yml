@@ -1,0 +1,35 @@
+version: "3.8"
+
+name: ncfs-mc-complex
+
+networks:
+    ncfs-mc-net:
+        name: ncfs-mc-net
+
+services:
+    ncfs:
+        image: barbarbar338/ncfs:buildx-latest 
+        container_name: ncfs
+        depends_on:
+            - mc
+        restart: unless-stopped
+        ports:
+            - 4040:4040
+        volumes:
+            - ./config.json:/app/config.json
+        networks:
+            - ncfs-mc-net
+
+    mc:
+        image: itzg/minecraft-server
+        container_name: mc
+        restart: unless-stopped
+        environment:
+            EULA: "true"
+            TYPE: PAPER
+        ports:
+            - 25565:25565/tcp
+        volumes:
+            - ./mc-data:/data
+        networks:
+            - ncfs-mc-net

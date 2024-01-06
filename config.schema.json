@@ -32,6 +32,10 @@
         "CLOUDFLARE_SRV_RECORD_NAME": {
             "description": "Cloudflare record name (play.mydomain.com, use this while connecting to your server), create a SRV record in your Cloudflare dashboard and set the name to this value (you can put your CLOUDFLARE_CNAME_RECORD_NAME variable to content for now)",
             "type": "string"
+        },
+        "CLOUDFLARE_SRV_RECORD_PREIX": {
+            "description": "Cloudflare SRV record prefix. Example: _minecraft._tcp for minecraft",
+            "type": "string"
         }
     },
     "required": [

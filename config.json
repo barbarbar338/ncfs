@@ -6,5 +6,6 @@
     "CLOUDFLARE_API_KEY": "",
     "CLOUDFLARE_ZONE_ID": "",
     "CLOUDFLARE_CNAME_RECORD_NAME": "server.example.com",
-    "CLOUDFLARE_SRV_RECORD_NAME": "play.example.com"
+    "CLOUDFLARE_SRV_RECORD_NAME": "play.example.com",
+    "CLOUDFLARE_SRV_RECORD_PREIX": "_minecraft._tcp"
 }
