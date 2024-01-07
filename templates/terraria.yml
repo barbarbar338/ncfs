@@ -4,28 +4,48 @@ name: ncfs-terraria-complex
 
 networks:
     ncfs-terraria-net:
-        name: ncfs-terraria-net
+
+volumes:
+    tshock-data:
+    worlds-data:
+    plugins-data:
 
 services:
     ncfs:
         image: barbarbar338/ncfs:buildx-latest 
         container_name: ncfs
+        restart: unless-stopped
         depends_on:
             - terraria
-        restart: unless-stopped
         ports:
             - 4040:4040
-        volumes:
-            - ./config.json:/app/config.json
         networks:
             - ncfs-terraria-net
+        environment:
+            NGROK_TCP_PORT: 25565
+            NGROK_AUTH_TOKEN: <Your NGROK auth token here>
+            CLOUDFLARE_AUTH_EMAIL: <Your Cloudflare email here>
+            CLOUDFLARE_API_KEY: <Your Cloudflare Global API key here>
+            CLOUDFLARE_ZONE_ID: <Your domain's Cloudflare Zone ID here>
+            CLOUDFLARE_CNAME_RECORD_NAME: server.example.com
+            CLOUDFLARE_SRV_RECORD_NAME: play.example.com
+            CLOUDFLARE_SRV_RECORD_PREIX: _terraria._tcp
 
     terraria:
+        image: barbarbar338/tshock:buildx-latest
         container_name: terraria
-        image: kaysond/docker-terraria
         restart: unless-stopped
+        ports:
+            - 7777:7777 # Terraria port
+            - 7878:7878 # TShock REST API port
         volumes:
-            - ./docker-volumes/terraria-data/worlds:/world
-            - ./docker-volumes/terraria-data/config:/config
+            - tshock-data:/tshock
+            - worlds-data:/worlds
+            - plugins-data:/plugins
         networks:
             - ncfs-terraria-net
+        environment:
+            WORLDNAME: myworld
+            MOTD: TShock on Docker!
+            DIFFICULTY: 0
+            AUTOCREATE: 1
