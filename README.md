@@ -9,6 +9,34 @@
 # 🐋 Use with docker
 - To start using this script, you need to install docker and docker-compose.
 - Download [`docker-compose.yml`](https://raw.githubusercontent.com/barbarbar338/ncfs/main/docker/docker-compose.yml) file
+```yml
+version: "3.8"
+
+name: ncfs
+
+networks:
+    ncfs-net:
+
+services:
+    ncfs:
+        image: barbarbar338/ncfs:buildx-latest 
+        container_name: ncfs
+        restart: unless-stopped
+        ports:
+            - 4040:4040
+        networks:
+            - ncfs-net
+        environment:
+            NGROK_TCP_PORT: <game server port here>
+            NGROK_AUTH_TOKEN: <Your NGROK auth token here>
+            CLOUDFLARE_AUTH_EMAIL: <Your Cloudflare email here>
+            CLOUDFLARE_API_KEY: <Your Cloudflare Global API key here>
+            CLOUDFLARE_ZONE_ID: <Your domain's Cloudflare Zone ID here>
+            CLOUDFLARE_CNAME_RECORD_NAME: server.example.com
+            # If the game supports SRV records, put the prefix here, otherwise leave blank
+            CLOUDFLARE_SRV_RECORD_NAME: <SRV record name>
+            CLOUDFLARE_SRV_RECORD_PREIX: <SRV record prefix>
+```
 - Edit `docker-compose.yml` file as you wish.
 - Run `docker-compose up -d` and wait
 - You (and everyone in the world!) can now connect to your game server using your domain name.

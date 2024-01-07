@@ -15,7 +15,7 @@ services:
         networks:
             - ncfs-net
         environment:
-            NGROK_TCP_PORT: 25565
+            NGROK_TCP_PORT: <game server port here>
             NGROK_AUTH_TOKEN: <Your NGROK auth token here>
             CLOUDFLARE_AUTH_EMAIL: <Your Cloudflare email here>
             CLOUDFLARE_API_KEY: <Your Cloudflare Global API key here>
