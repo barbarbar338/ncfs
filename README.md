@@ -41,6 +41,13 @@ services:
 - Run `docker-compose up -d` and wait
 - You (and everyone in the world!) can now connect to your game server using your domain name.
 
+# 📦 Templates
+- You can use ready to use templates for your game server.
+- To use a template, simply download the template file and run `docker-compose up -d -f <template file>`
+- Currently these templates are supported:
+    - Minecraft: https://raw.githubusercontent.com/barbarbar338/ncfs/main/templates/minecraft.yml
+    - Terraria (TShock): https://raw.githubusercontent.com/barbarbar338/ncfs/main/templates/terraria.yml
+
 # 🧦 Contributing
 
 Feel free to use GitHub's features.
