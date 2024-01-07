@@ -22,7 +22,7 @@ services:
         networks:
             - ncfs-terraria-net
         environment:
-            NGROK_TCP_PORT: 25565
+            NGROK_TCP_PORT: 7777
             NGROK_AUTH_TOKEN: <Your NGROK auth token here>
             CLOUDFLARE_AUTH_EMAIL: <Your Cloudflare email here>
             CLOUDFLARE_API_KEY: <Your Cloudflare Global API key here>
