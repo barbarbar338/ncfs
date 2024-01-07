@@ -1,6 +1,7 @@
 FROM ngrok/ngrok:alpine
 
 USER root
+
 # Install dependecies
 # RUN apk update
 RUN apk add --no-cache jq curl bash wget git shadow coreutils
@@ -22,4 +23,3 @@ RUN chmod 755 /app/runner.sh
 
 EXPOSE 4040
 ENTRYPOINT [ "/app/runner.sh" ]
-
