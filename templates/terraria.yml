@@ -30,6 +30,7 @@ services:
             CLOUDFLARE_CNAME_RECORD_NAME: server.example.com
             CLOUDFLARE_SRV_RECORD_NAME: play.example.com
             CLOUDFLARE_SRV_RECORD_PREIX: _terraria._tcp
+            DOCKER_NETWORK: terraria
 
     terraria:
         image: barbarbar338/tshock:buildx-latest

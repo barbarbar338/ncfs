@@ -2,18 +2,12 @@ version: "3.8"
 
 name: ncfs
 
-networks:
-    ncfs-net:
-
 services:
     ncfs:
         image: barbarbar338/ncfs:buildx-latest 
         container_name: ncfs
         restart: unless-stopped
-        ports:
-            - 4040:4040
-        networks:
-            - ncfs-net
+        network: host
         environment:
             NGROK_TCP_PORT: <game server port here>
             NGROK_AUTH_TOKEN: <Your NGROK auth token here>

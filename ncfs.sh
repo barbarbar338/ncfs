@@ -80,7 +80,11 @@ fi
 echo "Starting ngrok..."
 ngrok config add-authtoken $NGROK_AUTH_TOKEN
 
-ngrok tcp 127.0.0.1:$NGROK_TCP_PORT >/dev/null &
+if [ -z "$DOCKER_NETWORK" ]; then
+	ngrok tcp 127.0.0.1:$NGROK_TCP_PORT >/dev/null &
+else
+	ngrok tcp $DOCKER_NETWORK:$NGROK_TCP_PORT >/dev/null &
+fi
 
 while ! curl -s localhost:4040/api/tunnels | grep -q "tcp://"; do
 	sleep 1
