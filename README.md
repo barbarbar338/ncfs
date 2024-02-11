@@ -35,7 +35,7 @@ services:
             CLOUDFLARE_CNAME_RECORD_NAME: server.example.com
             # If the game supports SRV records, put the prefix here, otherwise leave blank
             CLOUDFLARE_SRV_RECORD_NAME: <SRV record name>
-            CLOUDFLARE_SRV_RECORD_PREIX: <SRV record prefix>
+            CLOUDFLARE_SRV_RECORD_PREFIX: <SRV record prefix>
 ```
 - Edit `docker-compose.yml` file as you wish.
 - Run `docker-compose up -d` and wait

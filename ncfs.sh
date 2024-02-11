@@ -45,7 +45,7 @@ CLOUDFLARE_API_KEY=$(get_variable "CLOUDFLARE_API_KEY" "config.json" true)
 CLOUDFLARE_ZONE_ID=$(get_variable "CLOUDFLARE_ZONE_ID" "config.json" true)
 CLOUDFLARE_CNAME_RECORD_NAME=$(get_variable "CLOUDFLARE_CNAME_RECORD_NAME" "config.json" true)
 CLOUDFLARE_SRV_RECORD_NAME=$(get_variable "CLOUDFLARE_SRV_RECORD_NAME" "config.json" false)
-CLOUDFLARE_SRV_RECORD_PREIX=$(get_variable "CLOUDFLARE_SRV_RECORD_PREIX" "config.json" false)
+CLOUDFLARE_SRV_RECORD_PREFIX=$(get_variable "CLOUDFLARE_SRV_RECORD_PREFIX" "config.json" false)
 
 echo "Checking if CNAME record exists in Cloudflare..."
 cname_record=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records?type=CNAME&name=$CLOUDFLARE_CNAME_RECORD_NAME" \
@@ -121,7 +121,7 @@ if [ "$CLOUDFLARE_SRV_RECORD_NAME" != "_DEFAULT_VALUE_DO_NOT_USE_IT" ]; then
 		-H "X-Auth-Email: $CLOUDFLARE_AUTH_EMAIL" \
 		-H "X-Auth-Key: $CLOUDFLARE_API_KEY" \
 		-H "Content-Type: application/json" \
-		--data "{\"type\":\"SRV\",\"name\":\"$CLOUDFLARE_SRV_RECORD_PREIX.$CLOUDFLARE_SRV_RECORD_NAME\",\"data\": {\"name\":\"$CLOUDFLARE_SRV_RECORD_NAME\",\"port\":$ngrok_port,\"proto\":\"_tcp\",\"service\":\"_minecraft\",\"target\":\"$CLOUDFLARE_CNAME_RECORD_NAME\"}}")
+		--data "{\"type\":\"SRV\",\"name\":\"$CLOUDFLARE_SRV_RECORD_PREFIX.$CLOUDFLARE_SRV_RECORD_NAME\",\"data\": {\"name\":\"$CLOUDFLARE_SRV_RECORD_NAME\",\"port\":$ngrok_port,\"proto\":\"_tcp\",\"service\":\"_minecraft\",\"target\":\"$CLOUDFLARE_CNAME_RECORD_NAME\"}}")
 
 	case "$update" in
 	*"\"success\":false"*)
