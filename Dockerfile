@@ -6,8 +6,8 @@ USER root
 # RUN apk update
 RUN apk add --no-cache jq curl bash wget git shadow coreutils
 
-# Create USER
-RUN adduser --shell $(which bash) --disabled-password app
+# Create a non-root user with /bin/bash as its shell
+RUN adduser -D -s /bin/bash app
 
 # Permission
 RUN mkdir /app
