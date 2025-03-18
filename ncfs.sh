@@ -101,22 +101,23 @@ echo "=== END TARGET SERVICE CHECK ==="
 CLOUDFLARE_CNAME_RECORD_NAME="${CLOUDFLARE_CNAME_RECORD_NAME:-server.example.com}"
 echo "Using CNAME record name: $CLOUDFLARE_CNAME_RECORD_NAME"
 
-# Check for both possible spellings of the prefix variable (PREFIX and PREIX)
-if [ -n "$CLOUDFLARE_SRV_RECORD_PREFIX" ]; then
-    echo "Found SRV record prefix in environment: $CLOUDFLARE_SRV_RECORD_PREFIX"
-    SRV_PREFIX="$CLOUDFLARE_SRV_RECORD_PREFIX"
-elif [ -n "$CLOUDFLARE_SRV_RECORD_PREIX" ]; then
-    echo "Found SRV record prefix with typo (PREIX) in environment: $CLOUDFLARE_SRV_RECORD_PREIX"
-    SRV_PREFIX="$CLOUDFLARE_SRV_RECORD_PREIX"
+# Use a single SRV record in standard format (_service._proto.domain.tld)
+CLOUDFLARE_SRV_RECORD="${CLOUDFLARE_SRV_RECORD:-_minecraft._tcp.example.com}"
+echo "Using SRV record: $CLOUDFLARE_SRV_RECORD"
+
+# Parse the SRV record to get service, proto, and domain parts
+if [[ "$CLOUDFLARE_SRV_RECORD" =~ ^(_[^.]+)\.(_[^.]+)\.(.*) ]]; then
+    SRV_SERVICE="${BASH_REMATCH[1]}"
+    SRV_PROTO="${BASH_REMATCH[2]}"
+    SRV_DOMAIN="${BASH_REMATCH[3]}"
+    echo "Parsed SRV record - Service: $SRV_SERVICE, Protocol: $SRV_PROTO, Domain: $SRV_DOMAIN"
 else
-    SRV_PREFIX="_minecraft._tcp"
-    echo "No SRV record prefix found, using default: $SRV_PREFIX"
+    echo "WARNING: SRV record doesn't match the expected format (_service._proto.domain.tld)"
+    echo "SRV record may not work correctly."
+    SRV_SERVICE="_minecraft"
+    SRV_PROTO="_tcp"
+    SRV_DOMAIN="example.com"
 fi
-
-CLOUDFLARE_SRV_RECORD_NAME="${CLOUDFLARE_SRV_RECORD_NAME:-play.example.com}"
-echo "Using SRV record name: $CLOUDFLARE_SRV_RECORD_NAME"
-
-echo "Using SRV prefix: $SRV_PREFIX"
 
 echo "Checking if CNAME record exists in Cloudflare..."
 if [ "$CLOUDFLARE_AUTH_METHOD" = "API_KEY" ]; then
@@ -174,18 +175,17 @@ fi
 srv_record_exists=false
 srv_record_id=""
 
-if [ -n "$CLOUDFLARE_SRV_RECORD_NAME" ] && [ "$CLOUDFLARE_SRV_RECORD_NAME" != "play.example.com" ]; then
+if [ -n "$CLOUDFLARE_SRV_RECORD" ] && [ "$CLOUDFLARE_SRV_RECORD" != "_minecraft._tcp.example.com" ]; then
     echo "Checking if SRV record exists in Cloudflare..."
-    srv_lookup_name="${SRV_PREFIX}.${CLOUDFLARE_SRV_RECORD_NAME}"
-    echo "Looking up SRV record with name: $srv_lookup_name"
+    echo "Looking up SRV record with name: $CLOUDFLARE_SRV_RECORD"
     
     if [ "$CLOUDFLARE_AUTH_METHOD" = "API_KEY" ]; then
-        srv_record_response=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records?type=SRV&name=$srv_lookup_name" \
+        srv_record_response=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records?type=SRV&name=$CLOUDFLARE_SRV_RECORD" \
             -H "X-Auth-Email: $CLOUDFLARE_AUTH_EMAIL" \
             -H "X-Auth-Key: $CLOUDFLARE_API_KEY" \
             -H "Content-Type: application/json")
     elif [ "$CLOUDFLARE_AUTH_METHOD" = "API_TOKEN" ]; then
-        srv_record_response=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records?type=SRV&name=$srv_lookup_name" \
+        srv_record_response=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records?type=SRV&name=$CLOUDFLARE_SRV_RECORD" \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
             -H "Content-Type: application/json")
     fi
@@ -195,22 +195,17 @@ if [ -n "$CLOUDFLARE_SRV_RECORD_NAME" ] && [ "$CLOUDFLARE_SRV_RECORD_NAME" != "p
     if [[ $srv_record_response == *"\"count\":0"* ]]; then
         echo "SRV record does not exist in Cloudflare. Creating it now..."
         
-        # Parse the SRV_PREFIX to get the service and proto parts
-        IFS='.' read -ra PREFIX_PARTS <<< "$SRV_PREFIX"
-        SERVICE="${PREFIX_PARTS[0]}"
-        PROTO="${PREFIX_PARTS[1]}"
-        
         if [ "$CLOUDFLARE_AUTH_METHOD" = "API_KEY" ]; then
             create_srv_response=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records" \
                 -H "X-Auth-Email: $CLOUDFLARE_AUTH_EMAIL" \
                 -H "X-Auth-Key: $CLOUDFLARE_API_KEY" \
                 -H "Content-Type: application/json" \
-                --data "{\"type\":\"SRV\",\"name\":\"$srv_lookup_name\",\"data\":{\"service\":\"$SERVICE\",\"proto\":\"$PROTO\",\"name\":\"$CLOUDFLARE_SRV_RECORD_NAME\",\"priority\":1,\"weight\":1,\"port\":25565,\"target\":\"$CLOUDFLARE_CNAME_RECORD_NAME\"}}")
+                --data "{\"type\":\"SRV\",\"name\":\"$CLOUDFLARE_SRV_RECORD\",\"data\":{\"service\":\"$SRV_SERVICE\",\"proto\":\"$SRV_PROTO\",\"name\":\"$SRV_DOMAIN\",\"priority\":1,\"weight\":1,\"port\":25565,\"target\":\"$CLOUDFLARE_CNAME_RECORD_NAME\"}}")
         elif [ "$CLOUDFLARE_AUTH_METHOD" = "API_TOKEN" ]; then
             create_srv_response=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records" \
                 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
                 -H "Content-Type: application/json" \
-                --data "{\"type\":\"SRV\",\"name\":\"$srv_lookup_name\",\"data\":{\"service\":\"$SERVICE\",\"proto\":\"$PROTO\",\"name\":\"$CLOUDFLARE_SRV_RECORD_NAME\",\"priority\":1,\"weight\":1,\"port\":25565,\"target\":\"$CLOUDFLARE_CNAME_RECORD_NAME\"}}")
+                --data "{\"type\":\"SRV\",\"name\":\"$CLOUDFLARE_SRV_RECORD\",\"data\":{\"service\":\"$SRV_SERVICE\",\"proto\":\"$SRV_PROTO\",\"name\":\"$SRV_DOMAIN\",\"priority\":1,\"weight\":1,\"port\":25565,\"target\":\"$CLOUDFLARE_CNAME_RECORD_NAME\"}}")
         fi
         
         echo "SRV creation response: $create_srv_response"
@@ -291,24 +286,19 @@ fi
 if [ "$srv_record_exists" = true ]; then
     echo "Updating SRV record in Cloudflare..."
     
-    # Parse the SRV_PREFIX to get the service and proto parts
-    IFS='.' read -ra PREFIX_PARTS <<< "$SRV_PREFIX"
-    SERVICE="${PREFIX_PARTS[0]}"
-    PROTO="${PREFIX_PARTS[1]}"
-    
-    echo "Using service: $SERVICE, proto: $PROTO for SRV record"
+    echo "Using service: $SRV_SERVICE, proto: $SRV_PROTO for SRV record"
     
     if [ "$CLOUDFLARE_AUTH_METHOD" = "API_KEY" ]; then
         update_srv_response=$(curl -s -X PATCH "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records/$srv_record_id" \
             -H "X-Auth-Email: $CLOUDFLARE_AUTH_EMAIL" \
             -H "X-Auth-Key: $CLOUDFLARE_API_KEY" \
             -H "Content-Type: application/json" \
-            --data "{\"type\":\"SRV\",\"name\":\"$SRV_PREFIX.$CLOUDFLARE_SRV_RECORD_NAME\",\"data\": {\"service\":\"$SERVICE\",\"proto\":\"$PROTO\",\"name\":\"$CLOUDFLARE_SRV_RECORD_NAME\",\"priority\":1,\"weight\":1,\"port\":$ngrok_port,\"target\":\"$CLOUDFLARE_CNAME_RECORD_NAME\"}}")
+            --data "{\"type\":\"SRV\",\"name\":\"$CLOUDFLARE_SRV_RECORD\",\"data\": {\"service\":\"$SRV_SERVICE\",\"proto\":\"$SRV_PROTO\",\"name\":\"$SRV_DOMAIN\",\"priority\":1,\"weight\":1,\"port\":$ngrok_port,\"target\":\"$CLOUDFLARE_CNAME_RECORD_NAME\"}}")
     elif [ "$CLOUDFLARE_AUTH_METHOD" = "API_TOKEN" ]; then
         update_srv_response=$(curl -s -X PATCH "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records/$srv_record_id" \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
             -H "Content-Type: application/json" \
-            --data "{\"type\":\"SRV\",\"name\":\"$SRV_PREFIX.$CLOUDFLARE_SRV_RECORD_NAME\",\"data\": {\"service\":\"$SERVICE\",\"proto\":\"$PROTO\",\"name\":\"$CLOUDFLARE_SRV_RECORD_NAME\",\"priority\":1,\"weight\":1,\"port\":$ngrok_port,\"target\":\"$CLOUDFLARE_CNAME_RECORD_NAME\"}}")
+            --data "{\"type\":\"SRV\",\"name\":\"$CLOUDFLARE_SRV_RECORD\",\"data\": {\"service\":\"$SRV_SERVICE\",\"proto\":\"$SRV_PROTO\",\"name\":\"$SRV_DOMAIN\",\"priority\":1,\"weight\":1,\"port\":$ngrok_port,\"target\":\"$CLOUDFLARE_CNAME_RECORD_NAME\"}}")
     fi
 
     echo "SRV update response: $update_srv_response"
@@ -323,7 +313,7 @@ fi
 echo "Done! You can connect to your server using $ngrok_host:$ngrok_port"
 echo "CNAME record: $CLOUDFLARE_CNAME_RECORD_NAME -> $ngrok_host"
 if [ "$srv_record_exists" = true ]; then
-    echo "SRV record: $SRV_PREFIX.$CLOUDFLARE_SRV_RECORD_NAME -> $CLOUDFLARE_CNAME_RECORD_NAME:$ngrok_port"
+    echo "SRV record: $CLOUDFLARE_SRV_RECORD -> $CLOUDFLARE_CNAME_RECORD_NAME:$ngrok_port"
 fi
 
 tail -f "/dev/null"
