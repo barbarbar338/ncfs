@@ -1,4 +1,4 @@
-FROM ngrok/ngrok:alpine
+FROM ngrok/ngrok:3.21.0-alpine
 
 USER root
 
