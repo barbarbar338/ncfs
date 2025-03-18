@@ -5,6 +5,24 @@
 
 echo "Starting NCFS..."
 
+# Function to check if a port is open
+check_port_open() {
+    local host=$1
+    local port=$2
+    local timeout=$3
+    
+    echo "Checking if port $port is open on $host (timeout: ${timeout}s)..."
+    
+    # Try to connect using timeout and netcat
+    if timeout $timeout bash -c "cat < /dev/null > /dev/tcp/$host/$port" 2>/dev/null; then
+        echo "Port $port is open on $host"
+        return 0
+    else
+        echo "Port $port is NOT open on $host"
+        return 1
+    fi
+}
+
 # Diagnostic section - check Cloudflare authentication
 echo "=== TESTING CLOUDFLARE AUTHENTICATION ==="
 if [ -n "$CLOUDFLARE_AUTH_EMAIL" ] && [ -n "$CLOUDFLARE_API_KEY" ] && [ -n "$CLOUDFLARE_ZONE_ID" ]; then
@@ -50,6 +68,35 @@ echo "=== END AUTHENTICATION TEST ==="
 
 NGROK_TCP_PORT="${NGROK_TCP_PORT:-25565}"
 echo "Using TCP port: $NGROK_TCP_PORT"
+
+# If DOCKER_NETWORK is set, use it, otherwise use localhost
+TARGET_HOST="${DOCKER_NETWORK:-localhost}"
+echo "Using target host: $TARGET_HOST"
+
+# Check if the target port is actually open
+echo "=== CHECKING TARGET SERVICE ==="
+PORT_RETRY_COUNT=12
+PORT_RETRY_DELAY=5
+PORT_CHECK_TIMEOUT=2
+
+for i in $(seq 1 $PORT_RETRY_COUNT); do
+    echo "Port check attempt $i of $PORT_RETRY_COUNT"
+    if check_port_open "$TARGET_HOST" "$NGROK_TCP_PORT" "$PORT_CHECK_TIMEOUT"; then
+        echo "Target service is running and accepting connections on $TARGET_HOST:$NGROK_TCP_PORT"
+        TARGET_SERVICE_AVAILABLE=true
+        break
+    else
+        echo "No service detected on $TARGET_HOST:$NGROK_TCP_PORT, retrying in $PORT_RETRY_DELAY seconds..."
+        sleep $PORT_RETRY_DELAY
+    fi
+done
+
+if [ "$TARGET_SERVICE_AVAILABLE" != "true" ]; then
+    echo "WARNING: No service detected on $TARGET_HOST:$NGROK_TCP_PORT after $PORT_RETRY_COUNT attempts."
+    echo "We will still set up ngrok and DNS records, but they may not work correctly."
+    echo "Please ensure your target service is running and accessible on $TARGET_HOST:$NGROK_TCP_PORT"
+fi
+echo "=== END TARGET SERVICE CHECK ==="
 
 CLOUDFLARE_CNAME_RECORD_NAME="${CLOUDFLARE_CNAME_RECORD_NAME:-server.example.com}"
 echo "Using CNAME record name: $CLOUDFLARE_CNAME_RECORD_NAME"
@@ -186,8 +233,8 @@ fi
 echo "Starting ngrok..."
 ngrok config add-authtoken $NGROK_AUTH_TOKEN
 
-echo "Running: ngrok tcp $NGROK_TCP_PORT"
-ngrok tcp $NGROK_TCP_PORT >/dev/null &
+echo "Running: ngrok tcp $TARGET_HOST:$NGROK_TCP_PORT"
+ngrok tcp $TARGET_HOST:$NGROK_TCP_PORT >/dev/null &
 
 echo "Waiting for ngrok tunnel to be established..."
 for i in {1..30}; do
