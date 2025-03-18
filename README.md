@@ -31,15 +31,27 @@ services:
             NGROK_AUTH_TOKEN: <Your NGROK auth token here>
             CLOUDFLARE_AUTH_EMAIL: <Your Cloudflare email here>
             CLOUDFLARE_API_KEY: <Your Cloudflare Global API key here>
+            # You can also use API Token instead of API Key for better security
+            CLOUDFLARE_API_TOKEN: <Your Cloudflare API token here>
             CLOUDFLARE_ZONE_ID: <Your domain's Cloudflare Zone ID here>
             CLOUDFLARE_CNAME_RECORD_NAME: server.example.com
-            # If the game supports SRV records, put the prefix here, otherwise leave blank
-            CLOUDFLARE_SRV_RECORD_NAME: <SRV record name>
-            CLOUDFLARE_SRV_RECORD_PREFIX: <SRV record prefix>
+            # If the game supports SRV records, use the standard format
+            CLOUDFLARE_SRV_RECORD: _service._tcp.example.com
 ```
 - Edit `docker-compose.yml` file as you wish.
 - Run `docker-compose up -d` and wait
 - You (and everyone in the world!) can now connect to your game server using your domain name.
+
+## SRV Records
+
+SRV records allow clients to look up connection information (including port) using just a domain name. For games that support SRV records, use the standard format:
+
+```
+_service._protocol.domain.tld
+```
+
+For example:
+- Minecraft: `_minecraft._tcp.example.com`
 
 # 📦 Templates
 - You can use ready to use templates for your game server.
