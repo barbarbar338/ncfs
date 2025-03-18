@@ -5,92 +5,208 @@
 
 echo "Starting NCFS..."
 
-get_variable() {
-    local variable_name="$1"
-    local config_file="$2"
-    local force="$3"
-
-    if [ -n "${!variable_name}" ]; then
-        selected_value="${!variable_name}"
+# Diagnostic section - check Cloudflare authentication
+echo "=== TESTING CLOUDFLARE AUTHENTICATION ==="
+if [ -n "$CLOUDFLARE_AUTH_EMAIL" ] && [ -n "$CLOUDFLARE_API_KEY" ] && [ -n "$CLOUDFLARE_ZONE_ID" ]; then
+    echo "Testing API Key authentication method..."
+    cf_auth_test=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID" \
+        -H "X-Auth-Email: $CLOUDFLARE_AUTH_EMAIL" \
+        -H "X-Auth-Key: $CLOUDFLARE_API_KEY" \
+        -H "Content-Type: application/json")
+    
+    echo "API Key Auth Test Result: $cf_auth_test"
+    
+    if [[ $cf_auth_test == *"\"success\":true"* ]]; then
+        echo "API Key authentication successful!"
+        CLOUDFLARE_AUTH_METHOD="API_KEY"
     else
-        if [ -f "$config_file" ]; then
-            selected_value=$(jq -r ".$variable_name" "$config_file")
-            if [ "$selected_value" == "null" ]; then
-                if [ "$force" == true ]; then
-                    echo "$variable_name not found in config file and environment variables. Exiting."
-                    exit 1
-                else
-                    echo "$variable_name not found in config file and environment variables. Using default value."
-                    selected_value="_DEFAULT_VALUE_DO_NOT_USE_IT"
-                fi
-            fi
-        else
-            if [ "$force" == true ]; then
-                echo "$variable_name not found in config file and environment variables. Exiting."
-                exit 1
-            else
-                echo "$variable_name not found in config file and environment variables. Using default value."
-                selected_value="_DEFAULT_VALUE_DO_NOT_USE_IT"
-            fi
-        fi
+        echo "API Key authentication failed!"
     fi
-
-    echo "$selected_value"
-}
-
-NGROK_AUTH_TOKEN=$(get_variable "NGROK_AUTH_TOKEN" "config.json" true)
-NGROK_TCP_PORT=$(get_variable "NGROK_TCP_PORT" "config.json" true)
-CLOUDFLARE_AUTH_EMAIL=$(get_variable "CLOUDFLARE_AUTH_EMAIL" "config.json" true)
-CLOUDFLARE_API_KEY=$(get_variable "CLOUDFLARE_API_KEY" "config.json" true)
-CLOUDFLARE_ZONE_ID=$(get_variable "CLOUDFLARE_ZONE_ID" "config.json" true)
-CLOUDFLARE_CNAME_RECORD_NAME=$(get_variable "CLOUDFLARE_CNAME_RECORD_NAME" "config.json" true)
-CLOUDFLARE_SRV_RECORD_NAME=$(get_variable "CLOUDFLARE_SRV_RECORD_NAME" "config.json" false)
-CLOUDFLARE_SRV_RECORD_PREFIX=$(get_variable "CLOUDFLARE_SRV_RECORD_PREFIX" "config.json" false)
-
-echo "Checking if CNAME record exists in Cloudflare..."
-cname_record=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records?type=CNAME&name=$CLOUDFLARE_CNAME_RECORD_NAME" \
-	-H "X-Auth-Email: $CLOUDFLARE_AUTH_EMAIL" \
-	-H "X-Auth-Key: $CLOUDFLARE_API_KEY" \
-	-H "Content-Type: application/json")
-
-if [[ $cname_record == *"\"count\":0"* ]]; then
-	echo "CNAME record does not exist in Cloudflare. You have to create it manually. Create a CNAME record in your Cloudflare dashboard and set the name to $CLOUDFLARE_CNAME_RECORD_NAME (you can put example.com to content for now)"
-	exit 1
 fi
 
-cname_record_id=$(echo "$cname_record" | sed -E 's/.*"id":"(\w+)".*/\1/')
+if [ -n "$CLOUDFLARE_API_TOKEN" ]; then
+    echo "Testing API Token authentication method..."
+    cf_token_test=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID" \
+        -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+        -H "Content-Type: application/json")
+    
+    echo "API Token Auth Test Result: $cf_token_test"
+    
+    if [[ $cf_token_test == *"\"success\":true"* ]]; then
+        echo "API Token authentication successful!"
+        CLOUDFLARE_AUTH_METHOD="API_TOKEN"
+    else
+        echo "API Token authentication failed!"
+    fi
+fi
 
-srv_record_id="_DEFAULT_VALUE_DO_NOT_USE_IT"
+if [ -z "$CLOUDFLARE_AUTH_METHOD" ]; then
+    echo "ERROR: Could not authenticate with Cloudflare. Please check your API Key/Token and permissions."
+    echo "If using API Key, ensure CLOUDFLARE_AUTH_EMAIL and CLOUDFLARE_API_KEY are set correctly."
+    echo "If using API Token, ensure CLOUDFLARE_API_TOKEN is set correctly."
+    echo "Will continue but DNS updates may fail."
+fi
+echo "=== END AUTHENTICATION TEST ==="
 
-if [ "$CLOUDFLARE_SRV_RECORD_NAME" != "_DEFAULT_VALUE_DO_NOT_USE_IT" ]; then
-	echo "Checking if SRV record exists in Cloudflare..."
-	srv_record=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records?type=SRV&name=_minecraft._tcp.$CLOUDFLARE_SRV_RECORD_NAME" \
-		-H "X-Auth-Email: $CLOUDFLARE_AUTH_EMAIL" \
-		-H "X-Auth-Key: $CLOUDFLARE_API_KEY" \
-		-H "Content-Type: application/json")
+NGROK_TCP_PORT="${NGROK_TCP_PORT:-25565}"
+echo "Using TCP port: $NGROK_TCP_PORT"
 
-	if [[ $srv_record == *"\"count\":0"* ]]; then
-		echo "SRV record does not exist in Cloudflare. You have to create it manually. Create a SRV record in your Cloudflare dashboard and set the name to _minecraft._tcp.$CLOUDFLARE_SRV_RECORD_NAME, port to $NGROK_TCP_PORT, target to $CLOUDFLARE_CNAME_RECORD_NAME"
-		exit 1
-	fi
+CLOUDFLARE_CNAME_RECORD_NAME="${CLOUDFLARE_CNAME_RECORD_NAME:-server.example.com}"
+echo "Using CNAME record name: $CLOUDFLARE_CNAME_RECORD_NAME"
 
-	srv_record_id=$(echo "$srv_record" | sed -E 's/.*"id":"(\w+)".*/\1/')
+# Check for both possible spellings of the prefix variable (PREFIX and PREIX)
+if [ -n "$CLOUDFLARE_SRV_RECORD_PREFIX" ]; then
+    echo "Found SRV record prefix in environment: $CLOUDFLARE_SRV_RECORD_PREFIX"
+    SRV_PREFIX="$CLOUDFLARE_SRV_RECORD_PREFIX"
+elif [ -n "$CLOUDFLARE_SRV_RECORD_PREIX" ]; then
+    echo "Found SRV record prefix with typo (PREIX) in environment: $CLOUDFLARE_SRV_RECORD_PREIX"
+    SRV_PREFIX="$CLOUDFLARE_SRV_RECORD_PREIX"
+else
+    SRV_PREFIX="_minecraft._tcp"
+    echo "No SRV record prefix found, using default: $SRV_PREFIX"
+fi
+
+CLOUDFLARE_SRV_RECORD_NAME="${CLOUDFLARE_SRV_RECORD_NAME:-play.example.com}"
+echo "Using SRV record name: $CLOUDFLARE_SRV_RECORD_NAME"
+
+echo "Using SRV prefix: $SRV_PREFIX"
+
+echo "Checking if CNAME record exists in Cloudflare..."
+if [ "$CLOUDFLARE_AUTH_METHOD" = "API_KEY" ]; then
+    cname_record_response=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records?type=CNAME&name=$CLOUDFLARE_CNAME_RECORD_NAME" \
+        -H "X-Auth-Email: $CLOUDFLARE_AUTH_EMAIL" \
+        -H "X-Auth-Key: $CLOUDFLARE_API_KEY" \
+        -H "Content-Type: application/json")
+elif [ "$CLOUDFLARE_AUTH_METHOD" = "API_TOKEN" ]; then
+    cname_record_response=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records?type=CNAME&name=$CLOUDFLARE_CNAME_RECORD_NAME" \
+        -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+        -H "Content-Type: application/json")
+else
+    echo "No valid Cloudflare authentication method detected. Cannot fetch CNAME record."
+    exit 1
+fi
+
+echo "CNAME lookup response: $cname_record_response"
+
+cname_record_exists=false
+cname_record_id=""
+
+if [[ $cname_record_response == *"\"count\":0"* ]]; then
+    echo "CNAME record does not exist in Cloudflare. Creating it now..."
+    
+    if [ "$CLOUDFLARE_AUTH_METHOD" = "API_KEY" ]; then
+        create_cname_response=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records" \
+            -H "X-Auth-Email: $CLOUDFLARE_AUTH_EMAIL" \
+            -H "X-Auth-Key: $CLOUDFLARE_API_KEY" \
+            -H "Content-Type: application/json" \
+            --data "{\"type\":\"CNAME\",\"name\":\"$CLOUDFLARE_CNAME_RECORD_NAME\",\"content\":\"example.com\",\"ttl\":1,\"proxied\":false}")
+    elif [ "$CLOUDFLARE_AUTH_METHOD" = "API_TOKEN" ]; then
+        create_cname_response=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data "{\"type\":\"CNAME\",\"name\":\"$CLOUDFLARE_CNAME_RECORD_NAME\",\"content\":\"example.com\",\"ttl\":1,\"proxied\":false}")
+    fi
+    
+    echo "CNAME creation response: $create_cname_response"
+    
+    if [[ $create_cname_response == *"\"success\":true"* ]]; then
+        echo "CNAME record created successfully!"
+        cname_record_exists=true
+        cname_record_id=$(echo "$create_cname_response" | sed -E 's/.*"id":"([^"]+)".*/\1/')
+        echo "Created CNAME record ID: $cname_record_id"
+    else
+        echo "Failed to create CNAME record. Exiting."
+        exit 1
+    fi
+else
+    cname_record_exists=true
+    cname_record_id=$(echo "$cname_record_response" | sed -E 's/.*"id":"([^"]+)".*/\1/')
+    echo "Found CNAME record ID: $cname_record_id"
+fi
+
+srv_record_exists=false
+srv_record_id=""
+
+if [ -n "$CLOUDFLARE_SRV_RECORD_NAME" ] && [ "$CLOUDFLARE_SRV_RECORD_NAME" != "play.example.com" ]; then
+    echo "Checking if SRV record exists in Cloudflare..."
+    srv_lookup_name="${SRV_PREFIX}.${CLOUDFLARE_SRV_RECORD_NAME}"
+    echo "Looking up SRV record with name: $srv_lookup_name"
+    
+    if [ "$CLOUDFLARE_AUTH_METHOD" = "API_KEY" ]; then
+        srv_record_response=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records?type=SRV&name=$srv_lookup_name" \
+            -H "X-Auth-Email: $CLOUDFLARE_AUTH_EMAIL" \
+            -H "X-Auth-Key: $CLOUDFLARE_API_KEY" \
+            -H "Content-Type: application/json")
+    elif [ "$CLOUDFLARE_AUTH_METHOD" = "API_TOKEN" ]; then
+        srv_record_response=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records?type=SRV&name=$srv_lookup_name" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H "Content-Type: application/json")
+    fi
+    
+    echo "SRV lookup response: $srv_record_response"
+
+    if [[ $srv_record_response == *"\"count\":0"* ]]; then
+        echo "SRV record does not exist in Cloudflare. Creating it now..."
+        
+        # Parse the SRV_PREFIX to get the service and proto parts
+        IFS='.' read -ra PREFIX_PARTS <<< "$SRV_PREFIX"
+        SERVICE="${PREFIX_PARTS[0]}"
+        PROTO="${PREFIX_PARTS[1]}"
+        
+        if [ "$CLOUDFLARE_AUTH_METHOD" = "API_KEY" ]; then
+            create_srv_response=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records" \
+                -H "X-Auth-Email: $CLOUDFLARE_AUTH_EMAIL" \
+                -H "X-Auth-Key: $CLOUDFLARE_API_KEY" \
+                -H "Content-Type: application/json" \
+                --data "{\"type\":\"SRV\",\"name\":\"$srv_lookup_name\",\"data\":{\"service\":\"$SERVICE\",\"proto\":\"$PROTO\",\"name\":\"$CLOUDFLARE_SRV_RECORD_NAME\",\"priority\":1,\"weight\":1,\"port\":25565,\"target\":\"$CLOUDFLARE_CNAME_RECORD_NAME\"}}")
+        elif [ "$CLOUDFLARE_AUTH_METHOD" = "API_TOKEN" ]; then
+            create_srv_response=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records" \
+                -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+                -H "Content-Type: application/json" \
+                --data "{\"type\":\"SRV\",\"name\":\"$srv_lookup_name\",\"data\":{\"service\":\"$SERVICE\",\"proto\":\"$PROTO\",\"name\":\"$CLOUDFLARE_SRV_RECORD_NAME\",\"priority\":1,\"weight\":1,\"port\":25565,\"target\":\"$CLOUDFLARE_CNAME_RECORD_NAME\"}}")
+        fi
+        
+        echo "SRV creation response: $create_srv_response"
+        
+        if [[ $create_srv_response == *"\"success\":true"* ]]; then
+            echo "SRV record created successfully!"
+            srv_record_exists=true
+            srv_record_id=$(echo "$create_srv_response" | sed -E 's/.*"id":"([^"]+)".*/\1/')
+            echo "Created SRV record ID: $srv_record_id"
+        else
+            echo "Failed to create SRV record. Continuing without SRV record."
+        fi
+    else
+        srv_record_exists=true
+        srv_record_id=$(echo "$srv_record_response" | sed -E 's/.*"id":"([^"]+)".*/\1/')
+        echo "Found SRV record ID: $srv_record_id"
+    fi
 fi
 
 echo "Starting ngrok..."
 ngrok config add-authtoken $NGROK_AUTH_TOKEN
 
-if [ -z "$DOCKER_NETWORK" ]; then
-	ngrok tcp 127.0.0.1:$NGROK_TCP_PORT >/dev/null &
-else
-	ngrok tcp $DOCKER_NETWORK:$NGROK_TCP_PORT >/dev/null &
-fi
+echo "Running: ngrok tcp $NGROK_TCP_PORT"
+ngrok tcp $NGROK_TCP_PORT >/dev/null &
 
-while ! curl -s localhost:4040/api/tunnels | grep -q "tcp://"; do
-	sleep 1
+echo "Waiting for ngrok tunnel to be established..."
+for i in {1..30}; do
+    if curl -s localhost:4040/api/tunnels | grep -q "tcp://"; then
+        break
+    fi
+    echo "Waiting for ngrok tunnel... ($i/30)"
+    sleep 2
 done
 
-ngrok_url=$(curl -s localhost:4040/api/tunnels | grep -o "tcp://[0-9a-z.-]*:[0-9]*")
+ngrok_info=$(curl -s localhost:4040/api/tunnels)
+echo "Ngrok tunnel info: $ngrok_info"
+
+if ! echo "$ngrok_info" | grep -q "tcp://"; then
+    echo "Failed to establish ngrok tunnel. Exiting."
+    exit 1
+fi
+
+ngrok_url=$(echo "$ngrok_info" | grep -o "tcp://[0-9a-z.-]*:[0-9]*")
 parsed_ngrok_url=${ngrok_url/tcp:\/\//}
 
 IFS=':' read -ra ADDR <<<"$parsed_ngrok_url"
@@ -98,40 +214,70 @@ IFS=':' read -ra ADDR <<<"$parsed_ngrok_url"
 ngrok_host=${ADDR[0]}
 ngrok_port=${ADDR[1]}
 
-echo "Host is $ngrok_host"
-echo "Port is $ngrok_port"
+echo "Ngrok Host is $ngrok_host"
+echo "Ngrok Port is $ngrok_port"
 
-echo "Updating CNAME record in Cloudflare..."
-update=$(curl -s -X PATCH "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records/$cname_record_id" \
-	-H "X-Auth-Email: $CLOUDFLARE_AUTH_EMAIL" \
-	-H "X-Auth-Key: $CLOUDFLARE_API_KEY" \
-	-H "Content-Type: application/json" \
-	--data "{\"type\":\"CNAME\",\"name\":\"$CLOUDFLARE_CNAME_RECORD_NAME\",\"content\":\"$ngrok_host\"}")
+if [ "$cname_record_exists" = true ]; then
+    echo "Updating CNAME record in Cloudflare..."
+    if [ "$CLOUDFLARE_AUTH_METHOD" = "API_KEY" ]; then
+        update_cname_response=$(curl -s -X PATCH "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records/$cname_record_id" \
+            -H "X-Auth-Email: $CLOUDFLARE_AUTH_EMAIL" \
+            -H "X-Auth-Key: $CLOUDFLARE_API_KEY" \
+            -H "Content-Type: application/json" \
+            --data "{\"type\":\"CNAME\",\"name\":\"$CLOUDFLARE_CNAME_RECORD_NAME\",\"content\":\"$ngrok_host\"}")
+    elif [ "$CLOUDFLARE_AUTH_METHOD" = "API_TOKEN" ]; then
+        update_cname_response=$(curl -s -X PATCH "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records/$cname_record_id" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data "{\"type\":\"CNAME\",\"name\":\"$CLOUDFLARE_CNAME_RECORD_NAME\",\"content\":\"$ngrok_host\"}")
+    fi
 
-case "$update" in
-*"\"success\":false"*)
-	echo "CNAME record could not be updated in Cloudflare. $update"
-	exit 1
-	;;
-esac
+    echo "CNAME update response: $update_cname_response"
 
-if [ "$CLOUDFLARE_SRV_RECORD_NAME" != "_DEFAULT_VALUE_DO_NOT_USE_IT" ]; then
-	echo "Updating SRV record in Cloudflare..."
-	update=$(curl -s -X PATCH "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records/$srv_record_id" \
-		-H "X-Auth-Email: $CLOUDFLARE_AUTH_EMAIL" \
-		-H "X-Auth-Key: $CLOUDFLARE_API_KEY" \
-		-H "Content-Type: application/json" \
-		--data "{\"type\":\"SRV\",\"name\":\"$CLOUDFLARE_SRV_RECORD_PREFIX.$CLOUDFLARE_SRV_RECORD_NAME\",\"data\": {\"name\":\"$CLOUDFLARE_SRV_RECORD_NAME\",\"port\":$ngrok_port,\"proto\":\"_tcp\",\"service\":\"_minecraft\",\"target\":\"$CLOUDFLARE_CNAME_RECORD_NAME\"}}")
+    if [[ $update_cname_response == *"\"success\":true"* ]]; then
+        echo "CNAME record successfully updated in Cloudflare!"
+    else
+        echo "CNAME record could not be updated in Cloudflare. $update_cname_response"
+    fi
+fi
 
-	case "$update" in
-	*"\"success\":false"*)
-		echo "SRV record could not be updated in Cloudflare. $update"
-		exit 1
-		;;
-	esac
+if [ "$srv_record_exists" = true ]; then
+    echo "Updating SRV record in Cloudflare..."
+    
+    # Parse the SRV_PREFIX to get the service and proto parts
+    IFS='.' read -ra PREFIX_PARTS <<< "$SRV_PREFIX"
+    SERVICE="${PREFIX_PARTS[0]}"
+    PROTO="${PREFIX_PARTS[1]}"
+    
+    echo "Using service: $SERVICE, proto: $PROTO for SRV record"
+    
+    if [ "$CLOUDFLARE_AUTH_METHOD" = "API_KEY" ]; then
+        update_srv_response=$(curl -s -X PATCH "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records/$srv_record_id" \
+            -H "X-Auth-Email: $CLOUDFLARE_AUTH_EMAIL" \
+            -H "X-Auth-Key: $CLOUDFLARE_API_KEY" \
+            -H "Content-Type: application/json" \
+            --data "{\"type\":\"SRV\",\"name\":\"$SRV_PREFIX.$CLOUDFLARE_SRV_RECORD_NAME\",\"data\": {\"service\":\"$SERVICE\",\"proto\":\"$PROTO\",\"name\":\"$CLOUDFLARE_SRV_RECORD_NAME\",\"priority\":1,\"weight\":1,\"port\":$ngrok_port,\"target\":\"$CLOUDFLARE_CNAME_RECORD_NAME\"}}")
+    elif [ "$CLOUDFLARE_AUTH_METHOD" = "API_TOKEN" ]; then
+        update_srv_response=$(curl -s -X PATCH "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records/$srv_record_id" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data "{\"type\":\"SRV\",\"name\":\"$SRV_PREFIX.$CLOUDFLARE_SRV_RECORD_NAME\",\"data\": {\"service\":\"$SERVICE\",\"proto\":\"$PROTO\",\"name\":\"$CLOUDFLARE_SRV_RECORD_NAME\",\"priority\":1,\"weight\":1,\"port\":$ngrok_port,\"target\":\"$CLOUDFLARE_CNAME_RECORD_NAME\"}}")
+    fi
+
+    echo "SRV update response: $update_srv_response"
+
+    if [[ $update_srv_response == *"\"success\":true"* ]]; then
+        echo "SRV record successfully updated in Cloudflare!"
+    else
+        echo "SRV record could not be updated in Cloudflare. $update_srv_response"
+    fi
 fi
 
 echo "Done! You can connect to your server using $ngrok_host:$ngrok_port"
+echo "CNAME record: $CLOUDFLARE_CNAME_RECORD_NAME -> $ngrok_host"
+if [ "$srv_record_exists" = true ]; then
+    echo "SRV record: $SRV_PREFIX.$CLOUDFLARE_SRV_RECORD_NAME -> $CLOUDFLARE_CNAME_RECORD_NAME:$ngrok_port"
+fi
 
 tail -f "/dev/null"
 
