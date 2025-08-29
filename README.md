@@ -10,13 +10,6 @@
 - To start using this script, you need to install docker and docker-compose.
 - Download [`docker-compose.yml`](https://raw.githubusercontent.com/barbarbar338/ncfs/main/docker/docker-compose.yml) file
 ```yml
-version: "3.8"
-
-name: ncfs
-
-networks:
-    ncfs-net:
-
 services:
     ncfs:
         image: barbarbar338/ncfs:buildx-latest 

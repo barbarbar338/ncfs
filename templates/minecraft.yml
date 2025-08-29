@@ -1,7 +1,3 @@
-version: "3.8"
-
-name: ncfs-mc-complex
-
 networks:
     ncfs-mc-net:
 
@@ -26,8 +22,7 @@ services:
             CLOUDFLARE_API_KEY: <Your Cloudflare Global API key here>
             CLOUDFLARE_ZONE_ID: <Your domain's Cloudflare Zone ID here>
             CLOUDFLARE_CNAME_RECORD_NAME: server.example.com
-            CLOUDFLARE_SRV_RECORD_NAME: play.example.com
-            CLOUDFLARE_SRV_RECORD_PREFIX: _minecraft._tcp
+            CLOUDFLARE_SRV_RECORD: _minecraft._tcp.example.com
             DOCKER_NETWORK: mc
 
     mc:

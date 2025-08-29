@@ -1,0 +1,10 @@
+{
+    "$schema": "https://raw.githubusercontent.com/barbarbar338/ncfs/main/config.schema.json",
+    "CLOUDFLARE_API_KEY": "",
+    "CLOUDFLARE_AUTH_EMAIL": "",
+    "CLOUDFLARE_CNAME_RECORD_NAME": "server.example.com",
+    "CLOUDFLARE_SRV_RECORD": "_minecraft._tcp.example.com",
+    "CLOUDFLARE_ZONE_ID": "",
+    "NGROK_AUTH_TOKEN": "",
+    "NGROK_TCP_PORT": 25565
+}

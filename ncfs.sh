@@ -1,9 +1,41 @@
 #!/bin/bash
 
-# Copyright © 2023 Barış DEMİRCİ <hi@338.rocks>
+# Copyright © 2023-2025 Barış DEMİRCİ <hi@338.rocks>
 # SPDX-License-Identifier: GPL-3.0
 
 echo "Starting NCFS..."
+
+# Function to get variables from either config.json or environment
+get_variable() {
+    local var_name="$1"
+    local optional="${2:-false}"
+    local value
+
+    # Check environment variable
+    value="${!var_name}"
+    if [ -n "$value" ]; then
+        echo "$value"
+        return 0
+    fi
+
+    # Check config.json using jq
+    if [ -f "./config.json" ]; then
+        value=$(jq -r --arg v "$var_name" '.[$v] // empty' ./config.json)
+        if [ -n "$value" ] && [ "$value" != "null" ]; then
+            echo "$value"
+            return 0
+        fi
+    fi
+
+    # Not found
+    if [ "$optional" = "true" ]; then
+        echo ""
+        return 0
+    else
+        echo "Error: Variable '$var_name' not found in environment or config.json." >&2
+        exit 1
+    fi
+}
 
 # Function to check if a port is open
 check_port_open() {
@@ -22,6 +54,27 @@ check_port_open() {
         return 1
     fi
 }
+
+# Load required variables
+CLOUDFLARE_AUTH_EMAIL=$(get_variable "CLOUDFLARE_AUTH_EMAIL")
+CLOUDFLARE_ZONE_ID=$(get_variable "CLOUDFLARE_ZONE_ID")
+CLOUDFLARE_CNAME_RECORD_NAME=$(get_variable "CLOUDFLARE_CNAME_RECORD_NAME")
+NGROK_AUTH_TOKEN=$(get_variable "NGROK_AUTH_TOKEN")
+NGROK_TCP_PORT=$(get_variable "NGROK_TCP_PORT")
+
+# Load optional variables
+CLOUDFLARE_API_KEY=$(get_variable "CLOUDFLARE_API_KEY" true)
+CLOUDFLARE_API_TOKEN=$(get_variable "CLOUDFLARE_API_TOKEN" true)
+CLOUDFLARE_SRV_RECORD_NAME=$(get_variable "CLOUDFLARE_SRV_RECORD_NAME" true)
+CLOUDFLARE_SRV_RECORD_PREFIX=$(get_variable "CLOUDFLARE_SRV_RECORD_PREFIX" true)
+
+# Check if either CLOUDFLARE_API_KEY or CLOUDFLARE_API_TOKEN exists
+if [ -n "$CLOUDFLARE_API_KEY" ] || [ -n "$CLOUDFLARE_API_TOKEN" ]; then
+    echo "At least one Cloudflare API credential is set."
+else
+    echo "ERROR: No Cloudflare API credentials found." >&2
+    exit 1
+fi
 
 # Diagnostic section - check Cloudflare authentication
 echo "=== TESTING CLOUDFLARE AUTHENTICATION ==="

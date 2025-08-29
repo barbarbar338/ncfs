@@ -1,7 +1,3 @@
-version: "3.8"
-
-name: ncfs-terraria-complex
-
 networks:
     ncfs-terraria-net:
 
@@ -28,8 +24,6 @@ services:
             CLOUDFLARE_API_KEY: <Your Cloudflare Global API key here>
             CLOUDFLARE_ZONE_ID: <Your domain's Cloudflare Zone ID here>
             CLOUDFLARE_CNAME_RECORD_NAME: server.example.com
-            CLOUDFLARE_SRV_RECORD_NAME: play.example.com
-            CLOUDFLARE_SRV_RECORD_PREFIX: _terraria._tcp
             DOCKER_NETWORK: terraria
 
     terraria:
